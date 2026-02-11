@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Token Chat Wallet</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 0 10px;
+  background: #f9f9f9;
+}
+
+/* Container for wallet and chat */
+.container {
+  display: flex;
+  gap: 20px; /* Space between wallet and chat */
+  flex-wrap: wrap; /* Wrap on smaller screens */
+}
+
+/* Wallet and Chat styles */
+.wallet, .chat {
+  flex: 1 1 400px; /* Grow, shrink, basis */
+  border: 1px solid #ccc;
+  padding: 20px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* Buttons */
+button {
+  padding: 8px 12px;
+  cursor: pointer;
+  border: none;
+  background-color: #4CAF50;
+  color: #fff;
+  border-radius: 4px;
+  transition: background 0.3s;
+}
+button:hover {
+  background-color: #45a049;
+}
+
+/* Input */
+input[type="text"] {
+  width: calc(100% - 100px);
+  padding: 8px;
+  margin-right: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Messages */
+.message {
+  margin-bottom: 10px;
+  padding: 6px;
+  border-bottom: 1px solid #eee;
+}
+
+/* Error */
+.error {
+  color: red;
+  margin-top: 5px;
+}
+
+/* Scrollable messages */
+#messages {
+  height: 200px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  background: #fafafa;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="wallet">
+    <h2>Wallet</h2>
+    <p>Balance: <span id="balance">0</span> tokens</p>
+    <p>Expiry: <span id="expiry">N/A</span></p>
+    <button id="buyTokensBtn">Buy 100 Tokens</button>
+  </div>
+
+  <div class="chat">
+    <h2>Chat</h2>
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="Type a message">
+    <button id="sendBtn">Send</button>
+    <p class="error" id="errorMsg"></p>
+  </div>
+</div>
+
+<script>
+const userId = 1;
+const balanceEl = document.getElementById('balance');
+const expiryEl = document.getElementById('expiry');
+const messagesEl = document.getElementById('messages');
+const messageInput = document.getElementById('messageInput');
+const sendBtn = document.getElementById('sendBtn');
+const buyBtn = document.getElementById('buyTokensBtn');
+const errorMsg = document.getElementById('errorMsg');
+
+async function fetchWallet(){
+  const res = await fetch('http://localhost:3000/wallet');
+  const data = await res.json();
+  balanceEl.textContent = data.balance;
+  expiryEl.textContent = new Date(data.expires_at).toLocaleString();
+  sendBtn.disabled = data.balance <= 0 || new Date(data.expires_at) <= new Date();
+}
+
+async function buyTokens(){
+  const res = await fetch('http://localhost:3000/purchase',{method:'POST'});
+  const data = await res.json();
+  await fetchWallet();
+  alert(data.message);
+}
+
+async function sendMessage(){
+  const text = messageInput.value.trim();
+  if(!text) return;
+  const res = await fetch('http://localhost:3000/chat/send',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text})
+  });
+  const data = await res.json();
+  if(data.error){
+    errorMsg.textContent = data.error;
+  } else {
+    errorMsg.textContent = '';
+    const div = document.createElement('div');
+    div.className = 'message';
+    div.textContent = `${text} (-${data.costTokens} tokens)`;
+    messagesEl.appendChild(div);
+    messageInput.value='';
+    fetchWallet();
+  }
+}
+
+async function loadMessages(){
+  const res = await fetch(`http://localhost:3000/chat/${userId}/messages`);
+  const data = await res.json();
+  messagesEl.innerHTML = "";
+  data.messages.forEach(msg => {
+    const div = document.createElement("div");
+    div.className = "message";
+    div.textContent = msg.text;
+    messagesEl.appendChild(div);
+  });
+}
+
+buyBtn.addEventListener('click', buyTokens);
+sendBtn.addEventListener('click', sendMessage);
+
+window.onload = async () => {
+  await fetchWallet();
+  await loadMessages();
+};
+</script>
+</body>
+</html>
