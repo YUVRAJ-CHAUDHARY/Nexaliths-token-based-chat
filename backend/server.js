@@ -14,7 +14,7 @@ const db = new sqlite3.Database("app.db", (err) => {
   if (err) {
     console.log("DB error", err);
   } else {
-    console.log("Database connected ✅");
+    console.log("Database connected ");
   }
 });
 
@@ -47,7 +47,7 @@ db.serialize(() => {
     )
   `);
 
-  console.log("All tables ready ✅");
+  console.log("All tables ready");
 });
 
 
@@ -101,7 +101,7 @@ if (!text) {
 }
   const costTokens = Math.floor(Math.random() * 6) + 10;
 
-  // Step 1: Wallet check
+  //  Wallet check
   db.get(
     `SELECT * FROM wallet WHERE user_id = 1`,
     (err, wallet) => {
@@ -109,17 +109,17 @@ if (!text) {
         return res.status(500).json({ error: "DB_ERROR" });
       }
 
-      // Step 2: Expiry check
+      //  Expiry check
       if (wallet.expires_at <= Date.now()) {
         return res.status(400).json({ error: "TOKENS_EXPIRED" });
       }
 
-      // Step 3: Balance check
+      //  Balance check
       if (wallet.balance < costTokens) {
         return res.status(400).json({ error: "INSUFFICIENT_TOKENS" });
       }
 
-      // Step 4: Atomic operation
+      //  Atomic operation
       db.serialize(() => {
         // Deduct tokens
         db.run(
